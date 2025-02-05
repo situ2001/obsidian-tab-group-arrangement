@@ -1,4 +1,5 @@
 import { Plugin, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { debounce } from 'obsidian';
 
 export default class EditorGroupArrangementPlugin extends Plugin {
   static MIN_HEIGHT_PX = 80;
@@ -99,11 +100,11 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       }
     });
 
-    this.registerDomEvent(window, 'resize', () => {
+    this.registerDomEvent(window, 'resize', debounce(() => {
       if (this._isExpandedGroup) {
         this._expandActiveLeaf();
       }
-    })
+    }, 100));
   }
 
   private _collectedNonLeafNodes() {
