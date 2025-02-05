@@ -272,6 +272,11 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         throw new Error('Unexpected direction');
       }
 
+      // ensure the minimum size
+      weightOrHeightPathNode = Math.max(weightOrHeightPathNode,
+        isHorizontal ? EditorGroupArrangementPlugin.MIN_HEIGHT_PX : EditorGroupArrangementPlugin.MIN_WIDTH_PX
+      );
+
       // calculate the ratio between pathAscendants and non-pathAscendants
       let flexGrowForPathNode = 100 * weightOrHeightPathNode / (weightOrHeightPathNode + weightOrHeight);
       let flexGrowForEachNonPathNode = (100 * weightOrHeight / (weightOrHeightPathNode + weightOrHeight)) / Math.max(children.length - 1, 1);
