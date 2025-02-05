@@ -130,7 +130,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   /**
-   * Ideas: remove all flex-grow style from node with type "tabs" and "split"
+   * Remove all flex-grow style from node with type "tabs" and "split"
    */
   private _arrangeEvenly() {
     const collectedNonLeafNodes = this._collectedNonLeafNodes();
@@ -146,7 +146,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   /**
-   * Ideas: get the path ascendants of a node (not including the root node)
+   * Get the path ascendants of a node (not including the root node)
    */
   private _getPathAscendants(node: WorkspaceLeaf): Array<WorkspaceItem> {
     const pathAscendants: Array<WorkspaceItem> = [];
@@ -176,25 +176,24 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   /**
-   * Ideas: enlarge the active editor group and shrink the rest to a minimum size
-   * 
-   * in this scenario, editor group is a split node or a tab node
-   * 
-   * TODO: what is the minimum size?
+   * Enlarge the active tab node and shrink the rest to a minimum size
    */
   private _expandActiveLeaf(leaf?: WorkspaceLeaf) {
     const activeLeaf = leaf || this.app.workspace.activeLeaf;
     if (!activeLeaf) return;
     if (!this._isLeafUnderRootSplit(activeLeaf)) return;
 
-    const rootNode = this.app.workspace.rootSplit;
-    const minSizeMap = new Map<WorkspaceItem, [number, number]>();
-    const doRecurForSizeCalculation = (root: WorkspaceItem) => {
+    /**
+     * calculate the minimum size for each tab node and split node, in a bottom-up manner
+     * 
+     * the size(width and height) will be saved in @param minSizeMap
+     */
+    function doRecurForSizeCalculation(root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>): [number, number] {
       if (root instanceof WorkspaceSplit) {
         // @ts-ignore Since it is a private property
         const children = root.children;
         for (const child of children) {
-          const [width, height] = doRecurForSizeCalculation(child);
+          const [width, height] = doRecurForSizeCalculation(child, minSizeMap);
           minSizeMap.set(child, [width, height]);
         }
 
@@ -204,37 +203,39 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         // @ts-ignore Since it is a private property
         const isHorizontal = root.direction === "horizontal";
 
-        let res = [0, 0];
+        let minSizeOfCurrentNode = [0, 0];
         for (const child of children) {
           const [width, height] = minSizeMap.get(child)!;
           if (isVertical) {
-            res = [res[0] + width, Math.max(res[1], height)];
+            minSizeOfCurrentNode = [minSizeOfCurrentNode[0] + width, Math.max(minSizeOfCurrentNode[1], height)];
           } else if (isHorizontal) {
-            res = [Math.max(res[0], width), res[1] + height];
+            minSizeOfCurrentNode = [Math.max(minSizeOfCurrentNode[0], width), minSizeOfCurrentNode[1] + height];
           } else {
             throw new Error('Unexpected direction');
           }
         }
-        return res;
+
+        return [minSizeOfCurrentNode[0], minSizeOfCurrentNode[1]];
+      } else {
+        // reach the bottom, time to return. Here, we ensure bottom is a tab node
+        if (!(root instanceof WorkspaceTabs)) throw new Error('Unexpected node type'); // TODO show error message
+        return [EditorGroupArrangementPlugin.MIN_WIDTH_PX, EditorGroupArrangementPlugin.MIN_HEIGHT_PX];
       }
-      // reach the bottom, time to return. Here, we ensure bottom is a tab node
-      if (!(root instanceof WorkspaceTabs)) throw new Error('Unexpected node type');
-      return [EditorGroupArrangementPlugin.MIN_WIDTH_PX, EditorGroupArrangementPlugin.MIN_HEIGHT_PX];
     }
-    const rootSize = doRecurForSizeCalculation(rootNode);
-    minSizeMap.set(rootNode, [rootSize[0], rootSize[1]]);
 
-
-    const pathAscendants = this._getPathAscendants(activeLeaf);
-    const doRecurForResize = (root: WorkspaceItem) => {
+    /**
+     * Resize based on the minimum size calculated before.
+     * 
+     * After resizing, the expanded node should have a large enough size, and the rest should have a minimum size.
+     */
+    function doRecurForResize(root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>, pathAscendants: Array<WorkspaceItem>) {
       if (!(root instanceof WorkspaceSplit)) return;
 
       // @ts-ignore Since it is a private property
       const children = root.children;
+
       // @ts-ignore Since it is a private property
       const containerEl = root.containerEl as HTMLElement;
-
-      // get container size
       const containerSize = containerEl.getBoundingClientRect();
       let containerWidth = containerSize.width;
       let containerHeight = containerSize.height;
@@ -245,56 +246,66 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       // @ts-ignore Since it is a private property
       const isHorizontal = root.direction === "horizontal";
 
-      // calc ratio between non-pathAscendants and pathAscendants
-      let weightOrHeight = 0;
+      // sum up the width or height of non-path nodes
+      let weightOrHeightOfNonPathNode = 0;
       for (const child of children) {
-        if (pathAscendants.includes(child)
-          || child instanceof WorkspaceLeaf) {
+        // On the path or it is a leaf node
+        if (
+          pathAscendants.includes(child)
+          || child instanceof WorkspaceLeaf
+        ) {
           continue;
         }
 
         const [width, height] = minSizeMap.get(child)!;
         if (isVertical) {
-          weightOrHeight += width;
+          weightOrHeightOfNonPathNode += width;
         } else if (isHorizontal) {
-          weightOrHeight += height;
+          weightOrHeightOfNonPathNode += height;
         } else {
           throw new Error('Unexpected direction');
         }
       }
 
-      let weightOrHeightPathNode = 0;
+      let weightOrHeightOfPathNode = 0;
       if (isVertical) {
-        weightOrHeightPathNode = containerWidth - weightOrHeight;
+        weightOrHeightOfPathNode = containerWidth - weightOrHeightOfNonPathNode;
       } else if (isHorizontal) {
-        weightOrHeightPathNode = containerHeight - weightOrHeight;
+        weightOrHeightOfPathNode = containerHeight - weightOrHeightOfNonPathNode;
       } else {
         throw new Error('Unexpected direction');
       }
 
       // ensure the minimum size
-      weightOrHeightPathNode = Math.max(weightOrHeightPathNode,
+      weightOrHeightOfPathNode = Math.max(weightOrHeightOfPathNode,
         isHorizontal ? EditorGroupArrangementPlugin.MIN_HEIGHT_PX : EditorGroupArrangementPlugin.MIN_WIDTH_PX
       );
 
-      // calculate the ratio between pathAscendants and non-pathAscendants
-      let flexGrowForPathNode = 100 * weightOrHeightPathNode / (weightOrHeightPathNode + weightOrHeight);
-      let flexGrowForEachNonPathNode = (100 * weightOrHeight / (weightOrHeightPathNode + weightOrHeight)) / Math.max(children.length - 1, 1);
+      // transform px to percentage
+      const flexGrowOfPathNode = 100 * weightOrHeightOfPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode);
+      const flexGrowOfNonPathNode = (100 * weightOrHeightOfNonPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode)) / Math.max(children.length - 1, 1);
 
       // set flexGrow for each child
       for (const child of children) {
         const containerEl = child.containerEl as HTMLElement;
         if (pathAscendants.includes(child)) {
-          containerEl.style.flexGrow = flexGrowForPathNode.toString();
+          containerEl.style.flexGrow = flexGrowOfPathNode.toString();
         } else {
-          containerEl.style.flexGrow = flexGrowForEachNonPathNode.toString();
+          containerEl.style.flexGrow = flexGrowOfNonPathNode.toString();
         }
-        doRecurForResize(child);
+        doRecurForResize(child, minSizeMap, pathAscendants);
       }
     }
 
+    const rootNode = this.app.workspace.rootSplit;
+    const minSizeMap = new Map<WorkspaceItem, [number, number]>();
+    const pathAscendants = this._getPathAscendants(activeLeaf);
+
+    const rootSize = doRecurForSizeCalculation(rootNode, minSizeMap);
+    minSizeMap.set(rootNode, [rootSize[0], rootSize[1]]);
+
     // TODO if small root split is small, we need to handle it differently
-    doRecurForResize(rootNode);
+    doRecurForResize(rootNode, minSizeMap, pathAscendants);
 
     this._isExpandedGroup = true;
   }
