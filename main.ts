@@ -1,4 +1,4 @@
-import { Plugin, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { Notice, Plugin, setIcon, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 import { debounce } from 'obsidian';
 
 export default class EditorGroupArrangementPlugin extends Plugin {
@@ -10,10 +10,22 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   */
   private _isExpandedGroup: boolean = false;
 
+  /**
+   * Status bar item to show the current status of the plugin
+   */
+  private _statusBarItem: HTMLElement | undefined;
+
   async onload() {
     console.log("obsidian-editor-group-arrangement-plugin loaded");
     this._registerCommands();
     this._registerEventListeners();
+
+    this._statusBarItem = this.addStatusBarItem();
+    this._statusBarItem.addClass('mod-clickable');
+    this._statusBarItem.onClickEvent(() => {
+      this._toggleExpand();
+    });
+    this._updateUI();
   }
 
   async onunload() {
@@ -43,11 +55,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       id: 'arrange-editor-groups-toggle-expand',
       name: 'Toggle Expand Active Editor',
       callback: () => {
-        if (this._isExpandedGroup) {
-          this._arrangeEvenly();
-        } else {
-          this._expandActiveLeaf();
-        }
+        this._toggleExpand();
       },
       hotkeys: [],
     })
@@ -107,6 +115,32 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     }, 100));
   }
 
+  private _updateUI() {
+    if (this._isExpandedGroup) {
+      setIcon(this._statusBarItem!, 'expand');
+
+      // set aria-label to make it accessible
+      this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement: Expanded');
+      // new Notice('Editor group arrangement is set to expanded');
+    } else {
+      setIcon(this._statusBarItem!, 'shrink');
+
+      // set aria-label to make it accessible
+      this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement: Normal');
+
+      // new Notice('Editor group arrangement is reset to normal');
+    }
+    this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
+  }
+
+  private _toggleExpand() {
+    if (this._isExpandedGroup) {
+      this._arrangeEvenly();
+    } else {
+      this._expandActiveLeaf();
+    }
+  }
+
   private _collectedNonLeafNodes() {
     const collectedNonLeafNodes: Set<WorkspaceItem> = new Set();
     this.app.workspace.iterateRootLeaves((leaf) => {
@@ -143,6 +177,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     });
 
     this._isExpandedGroup = false;
+    this._updateUI();
   }
 
   /**
@@ -180,8 +215,13 @@ export default class EditorGroupArrangementPlugin extends Plugin {
    */
   private _expandActiveLeaf(leaf?: WorkspaceLeaf) {
     const activeLeaf = leaf || this.app.workspace.activeLeaf;
-    if (!activeLeaf) return;
-    if (!this._isLeafUnderRootSplit(activeLeaf)) return;
+    if (
+      !activeLeaf
+      || !this._isLeafUnderRootSplit(activeLeaf)
+    ) {
+      new Notice('Cursor or focus is not in any editor');
+      return;
+    };
 
     /**
      * calculate the minimum size for each tab node and split node, in a bottom-up manner
@@ -308,5 +348,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     doRecurForResize(rootNode, minSizeMap, pathAscendants);
 
     this._isExpandedGroup = true;
+    this._updateUI();
   }
 }
