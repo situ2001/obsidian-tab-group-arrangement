@@ -1,49 +1,65 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceItem, WorkspaceLeaf, WorkspaceMobileDrawer, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { Plugin, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 
-// Remember to rename these classes and interfaces!
 export default class EditorGroupArrangementPlugin extends Plugin {
-  static MIN_HEIGHT_PX = 200;
+  static MIN_HEIGHT_PX = 80;
   static MIN_WIDTH_PX = 200;
 
+  /**
+   * if the active editor group is expanded, there is a tab node that has width or height > 200px
+  */
+  private _isExpandedGroup: boolean = false;
+
   async onload() {
-    console.log("Hello world");
+    console.log("obsidian-editor-group-arrangement-plugin loaded");
     this._registerCommands();
     this._registerEventListeners();
   }
 
   async onunload() {
-    console.log("Goodbye world");
+    console.log("obsidian-editor-group-arrangement-plugin unloaded");
   }
 
   private _registerCommands() {
     this.addCommand({
       id: 'arrange-editor-groups-evenly',
-      name: 'Arrange Editor Groups: Evenly',
+      name: 'Arrange Evenly',
       callback: () => {
         this._arrangeEvenly();
-        this._isExpandedGroup = false;
       },
       hotkeys: []
     });
 
     this.addCommand({
       id: 'arrange-editor-groups-expand-active',
-      name: 'Arrange Editor Groups: Expand Active',
+      name: 'Expand Active Editor',
       callback: () => {
         this._expandActiveLeaf();
-        this._isExpandedGroup = true;
       },
       hotkeys: []
     });
 
     this.addCommand({
-      id: 'arrange-editor-groups-collapse-maximize-active',
-      name: 'Arrange Editor Groups: Collapse and Maximize Active',
+      id: 'arrange-editor-groups-toggle-expand',
+      name: 'Toggle Expand Active Editor',
       callback: () => {
-        // TODO
+        if (this._isExpandedGroup) {
+          this._arrangeEvenly();
+        } else {
+          this._expandActiveLeaf();
+        }
       },
-      hotkeys: []
+      hotkeys: [],
     })
+
+    // TODO feature to be implemented in the future
+    // this.addCommand({
+    //   id: 'arrange-editor-groups-collapse-maximize-active',
+    //   name: 'Maximize Active Editor',
+    //   callback: () => {
+    //     // TODO
+    //   },
+    //   hotkeys: []
+    // })
   }
 
   private _registerEventListeners() {
@@ -52,7 +68,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       if (!target.closest('.mod-root')) return;
 
       if (this._isExpandedGroup) {
-        // check if it is in or is a tab item. class name of tab item is "workspace-tab-header" and "tappable"
         const closestElem = target.closest('.workspace-tab-header')
         if (closestElem) {
           this._expandActiveLeaf();
@@ -60,41 +75,35 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       }
     });
 
-    this.registerDomEvent(document, 'dblclick', (event) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.mod-root')) return;
+    // TODO buggy: when we double on tab, the electron window will resize before the plugin can handle the event, and we cannot prevent it
+    // this.registerDomEvent(document, 'dblclick', (event) => {
+    //   const target = event.target as HTMLElement;
+    //   if (!target.closest('.mod-root')) return;
 
-      // check if it is in or is a tab item. class name of tab item is "workspace-tab-header" and "tappable"
-      const closestElem = target.closest('.workspace-tab-header')
-      if (closestElem) {
-        this._toggleExpand();
+    //   // check if it is in or is a tab item. class name of tab item is "workspace-tab-header" and "tappable"
+    //   const closestElem = target.closest('.workspace-tab-header')
+    //   if (closestElem) {
+    //     // to prevent the default behavior of double click, which is to resize the window
+    //     event.stopPropagation();
+    //     event.preventDefault();
+
+    //     this._toggleExpand();
+    //   }
+    // });
+
+    this.app.workspace.on('active-leaf-change', (leaf) => {
+      // TODO buggy, it you create a new split node from tab node that exists in other split, it will not work. Since the active leaf is not changed...
+      // FIXME: maybe we can listen to layout-change event
+      if (this._isExpandedGroup && leaf) {
+        this._expandActiveLeaf(leaf);
       }
     });
 
-    this.app.workspace.on('active-leaf-change', (leaf) => {
-      // TODO buggy, it you create a new split from tab that exists in other split, it will not work. Since the active leaf is not changed...
-      
-      if (this._isExpandedGroup && leaf) {
-        requestAnimationFrame(() => {
-          this._expandActiveLeaf(leaf);
-        })
+    this.registerDomEvent(window, 'resize', () => {
+      if (this._isExpandedGroup) {
+        this._expandActiveLeaf();
       }
     })
-  }
-
-  /**
-   * if the active editor group is expanded, there is a tab node that has width or height > 200px
-   */
-  private _isExpandedGroup: boolean = false;
-
-  private async _toggleExpand() {
-    if (this._isExpandedGroup) {
-      this._arrangeEvenly();
-      this._isExpandedGroup = false;
-    } else {
-      this._expandActiveLeaf();
-      this._isExpandedGroup = true;
-    }
   }
 
   private _collectedNonLeafNodes() {
@@ -131,6 +140,8 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       if (!el) return;
       el.style.flexGrow = '';
     });
+
+    this._isExpandedGroup = false;
   }
 
   /**
@@ -151,29 +162,16 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     return pathAscendants;
   }
 
-  private _expandActiveLeafSmallRootSplit() {
-    const activeLeaf = this.app.workspace.activeLeaf;
-    if (!activeLeaf) return;
+  private _isLeafUnderRootSplit(leaf: WorkspaceItem): boolean {
+    let parent = leaf.parent;
+    while (parent) {
+      if (parent === this.app.workspace.rootSplit) {
+        return true;
+      }
+      parent = parent.parent;
+    }
 
-    const pathAscendants = this._getPathAscendants(activeLeaf);
-    const nonLeafNodes = this._collectedNonLeafNodes();
-    const nodesNotInPathAscendants = Array.from(nonLeafNodes)
-      .filter((node) => !pathAscendants.includes(node));
-
-    nodesNotInPathAscendants.forEach((node) => {
-      // @ts-ignore. Since it is a private property
-      const el = node.containerEl as HTMLElement;
-      if (!el) return;
-      el.style.flexGrow = '15';
-    });
-
-    // set flexGrow to 90 for pathAscendants
-    pathAscendants.forEach((node) => {
-      // @ts-ignore. Since it is a private property
-      const el = node.containerEl as HTMLElement;
-      if (!el) return;
-      el.style.flexGrow = '85';
-    });
+    return false;
   }
 
   /**
@@ -186,6 +184,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   private _expandActiveLeaf(leaf?: WorkspaceLeaf) {
     const activeLeaf = leaf || this.app.workspace.activeLeaf;
     if (!activeLeaf) return;
+    if (!this._isLeafUnderRootSplit(activeLeaf)) return;
 
     const rootNode = this.app.workspace.rootSplit;
     const minSizeMap = new Map<WorkspaceItem, [number, number]>();
@@ -288,24 +287,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       }
     }
 
-    // if total size of root node is larger than root container size, we should use resize for small screen method
-    const rootSplit = this.app.workspace.rootSplit;
-    const minSizeOfRootSplit = minSizeMap.get(rootSplit)!;
-    // @ts-ignore
-    const rootSplitEl = rootSplit.containerEl as HTMLElement;
-    const rootSplitSize = rootSplitEl.getBoundingClientRect();
-    const rootSplitWidth = rootSplitSize.width;
-    const rootSplitHeight = rootSplitSize.height;
+    // TODO if small root split is small, we need to handle it differently
+    doRecurForResize(rootNode);
 
-    const FIXED_SIZE = 100;
-
-    if (rootSplitWidth < minSizeOfRootSplit[0] + EditorGroupArrangementPlugin.MIN_WIDTH_PX + FIXED_SIZE
-      || rootSplitHeight < minSizeOfRootSplit[1] + EditorGroupArrangementPlugin.MIN_HEIGHT_PX + FIXED_SIZE) {
-      console.warn("use resize for small screen method");
-      this._expandActiveLeafSmallRootSplit();
-    } else {
-      doRecurForResize(rootNode);
-    }
-
+    this._isExpandedGroup = true;
   }
 }
