@@ -288,9 +288,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
       // sum up the width or height of non-path nodes
       let weightOrHeightOfNonPathNode = 0;
-      console.log('pathAscendants', pathAscendants);
       for (const child of children) {
-        console.log('child', child);
         // On the path or it is a leaf node
         if (
           pathAscendants.includes(child)
@@ -298,9 +296,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         ) {
           continue;
         }
-
-        console.log('filtered child', child);
-
 
         const [width, height] = minSizeMap.get(child)!;
         if (isVertical) {
