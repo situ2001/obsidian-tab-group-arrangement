@@ -1,4 +1,6 @@
-# Obsidian Sample Plugin
+# obsidian-editor-group-arrangement
+
+> TODO: Write a project description
 
 This is a sample plugin for Obsidian (https://obsidian.md).
 
