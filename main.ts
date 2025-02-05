@@ -288,7 +288,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
       // sum up the width or height of non-path nodes
       let weightOrHeightOfNonPathNode = 0;
+      console.log('pathAscendants', pathAscendants);
       for (const child of children) {
+        console.log('child', child);
         // On the path or it is a leaf node
         if (
           pathAscendants.includes(child)
@@ -296,6 +298,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         ) {
           continue;
         }
+
+        console.log('filtered child', child);
+
 
         const [width, height] = minSizeMap.get(child)!;
         if (isVertical) {
@@ -320,10 +325,13 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       weightOrHeightOfPathNode = Math.max(weightOrHeightOfPathNode,
         isHorizontal ? EditorGroupArrangementPlugin.MIN_HEIGHT_PX : EditorGroupArrangementPlugin.MIN_WIDTH_PX
       );
-
+      
       // transform px to percentage
+      const isPathNodeExist = (children as WorkspaceItem[]).some((child: WorkspaceItem) => pathAscendants.includes(child));
       const flexGrowOfPathNode = 100 * weightOrHeightOfPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode);
-      const flexGrowOfNonPathNode = (100 * weightOrHeightOfNonPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode)) / Math.max(children.length - 1, 1);
+      const flexGrowOfNonPathNode = isPathNodeExist
+        ? (100 * weightOrHeightOfNonPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode)) / Math.max(children.length - 1, 1)
+        : (100 * weightOrHeightOfNonPathNode / (weightOrHeightOfNonPathNode)) / Math.max(children.length, 1)
 
       // set flexGrow for each child
       for (const child of children) {
