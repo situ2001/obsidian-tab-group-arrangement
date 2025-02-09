@@ -1,6 +1,23 @@
 # obsidian-editor-group-arrangement
 
-> TODO: Write a project description
+## Introduction
+
+This is a plugin for [Obsidian](https://obsidian.md/), which provides a way to arrange the editor group in a more flexible way. Currently, the plugin supports the following features:
+
+- Arrange action
+  - Arrange evenly: this action will arrange the editor group evenly.
+  - Expand active editor: this action will expand the active editor, and shrink the other editors to the minimum size.
+- Arrange Mode
+  - Normal: Do nothing.
+  - Auto Expand: Automatically expand the active editor when the active editor is changed or when you click on the editor tab.
+
+## How to use
+
+1. Install and enable the plugin.
+2. Then you can make actions and switch modes from
+   1. The status bar. You can find a clickable icon with tooltip `Editor Group Arrangement` when you hover on it.
+   2. The command palette. Just type `Editor Group Arrangement` and you will find the commands.
+3. Enjoy!
 
 ## TODOs
 

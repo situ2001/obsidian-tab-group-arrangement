@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-editor-group-arrangement",
 	"version": "1.0.0",
-	"description": "An Obsidian plugin that help you arrange editor groups. E.g. expand or maximize active editor.",
+	"description": "An Obsidian plugin that provides a way to arrange the editor group in a more flexible way. For now, it supports arranging evenly and expanded like VSCode.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
