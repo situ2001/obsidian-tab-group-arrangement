@@ -2,7 +2,7 @@
 
 > Arrange your editor group in a more flexible way.
 
-![screenshots](./screenshot.png)
+![screenshots](./screenshot-recording.mov)
 
 ## Introduction
 
@@ -12,7 +12,7 @@ This is a plugin for [Obsidian](https://obsidian.md/), which provides a way to a
   - Arrange evenly: this action will arrange the editor group evenly.
   - Expand active editor: this action will expand the active editor, and shrink the other editors to the minimum size. Just like what vscode does.
 - Arrange Mode
-  - Normal: Do nothing.
+  - Manual: Do nothing.
   - Auto Expand: Automatically expand the active editor when the active editor is changed or when you click on the editor tab.
 
 ## How to use
