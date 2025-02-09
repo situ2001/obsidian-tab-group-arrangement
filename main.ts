@@ -150,12 +150,20 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const settingsFromStorage = await this.loadData();
+    // ensure the settings are valid
+    if (settingsFromStorage) {
+      this.settings = Object.assign({}, DEFAULT_SETTINGS, settingsFromStorage);
+      if (!Object.values(ARRANGEMENT_MODE).includes(this.settings.mode)) {
+        this.settings.mode = DEFAULT_SETTINGS.mode;
+      }
+    } else {
+      this.settings = Object.assign({}, DEFAULT_SETTINGS);
+    }
   }
 
   async saveSettings() {
     await this.saveData(this.settings);
-    this._updateStatusBarItem();
   }
 
   /**
