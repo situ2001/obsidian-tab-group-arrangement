@@ -2,7 +2,7 @@
 
 > Arrange your editor group in a more flexible way.
 
-![screenshots](./screen-recording.mp4)
+![screenshots](./screen-recording.gif)
 
 ## Introduction
 
