@@ -3,9 +3,9 @@ import { debounce } from 'obsidian';
 
 enum ARRANGEMENT_MODE {
   /**
-   * Normal mode, nothing will happen when the active editor is focused
+   * Manual mode, nothing will happen when the active editor is focused or tab is clicked
    */
-  NORMAL = "normal",
+  MANUAL = "manual",
 
   /**
    * Automatically expand the active editor when it is focused
@@ -13,11 +13,17 @@ enum ARRANGEMENT_MODE {
   AUTO_EXPAND = "auto_expand",
 }
 
+/**
+ * Icons for arrangement modes
+ */
 const iconForMode = {
-  [ARRANGEMENT_MODE.NORMAL]: 'columns-2',
+  [ARRANGEMENT_MODE.MANUAL]: 'columns-2',
   [ARRANGEMENT_MODE.AUTO_EXPAND]: 'expand',
 }
 
+/**
+ * Settings for the Editor Group Arrangement Plugin
+ */
 interface EditorGroupArrangementPluginSettings {
   mode: ARRANGEMENT_MODE;
 
@@ -33,7 +39,7 @@ interface EditorGroupArrangementPluginSettings {
 }
 
 const DEFAULT_SETTINGS: EditorGroupArrangementPluginSettings = {
-  mode: ARRANGEMENT_MODE.NORMAL,
+  mode: ARRANGEMENT_MODE.MANUAL,
   MIN_HEIGHT_PX: 80,
   MIN_WIDTH_PX: 200,
 };
@@ -61,7 +67,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       .setName('Mode')
       .setDesc('Choose the mode for editor group arrangement')
       .addDropdown((dropdown) => {
-        dropdown.addOption(ARRANGEMENT_MODE.NORMAL, "Manual arrangement");
+        dropdown.addOption(ARRANGEMENT_MODE.MANUAL, "Manual arrangement");
         dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto Expand Active Editor");
         dropdown.setValue(this.plugin.settings.mode);
         dropdown.onChange(async (value) => {
@@ -203,9 +209,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       menu.addItem((item) => {
         item.setTitle('Manual arrangement');
         item.setIcon("columns-2");
-        item.setChecked(this.settings.mode === ARRANGEMENT_MODE.NORMAL);
+        item.setChecked(this.settings.mode === ARRANGEMENT_MODE.MANUAL);
         item.onClick((e) => {
-          this.settings.mode = ARRANGEMENT_MODE.NORMAL;
+          this.settings.mode = ARRANGEMENT_MODE.MANUAL;
           setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
           this.saveSettings();
         });
@@ -268,10 +274,10 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       id: 'toggle-mode-between-manual-and-auto-expand',
       name: 'Toggle Mode between Manual and Auto Expand',
       callback: async () => {
-        if (this.settings.mode === ARRANGEMENT_MODE.NORMAL) {
+        if (this.settings.mode === ARRANGEMENT_MODE.MANUAL) {
           this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
         } else {
-          this.settings.mode = ARRANGEMENT_MODE.NORMAL;
+          this.settings.mode = ARRANGEMENT_MODE.MANUAL;
         }
         await this.saveSettings();
         this._updateStatusBarItem();
