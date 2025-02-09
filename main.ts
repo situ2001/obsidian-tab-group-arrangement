@@ -1,14 +1,29 @@
-import { Notice, Plugin, setIcon, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { Menu, Notice, Plugin, setIcon, SliderComponent, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 import { debounce } from 'obsidian';
 
+enum ARRANGEMENT_MODE {
+  /**
+   * Normal mode, nothing will happen when the active editor is focused
+   */
+  NORMAL,
+
+  /**
+   * Automatically expand the active editor when it is focused
+   */
+  AUTO_EXPAND,
+}
+
+const iconForMode = {
+  [ARRANGEMENT_MODE.NORMAL]: 'columns-2',
+  [ARRANGEMENT_MODE.AUTO_EXPAND]: 'expand',
+}
+
 export default class EditorGroupArrangementPlugin extends Plugin {
+  // TODO configurable
   static MIN_HEIGHT_PX = 80;
   static MIN_WIDTH_PX = 200;
 
-  /**
-   * if the active editor group is expanded, there is a tab node that has width or height > 200px
-  */
-  private _isExpandedGroup: boolean = false;
+  private mode: ARRANGEMENT_MODE = ARRANGEMENT_MODE.NORMAL;
 
   /**
    * Status bar item to show the current status of the plugin
@@ -19,17 +34,79 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     console.log("obsidian-editor-group-arrangement-plugin loaded");
     this._registerCommands();
     this._registerEventListeners();
-
-    this._statusBarItem = this.addStatusBarItem();
-    this._statusBarItem.addClass('mod-clickable');
-    this._statusBarItem.onClickEvent(() => {
-      this._toggleExpand();
-    });
-    this._updateUI();
+    this._setupStatusBarItem();
   }
 
   async onunload() {
     console.log("obsidian-editor-group-arrangement-plugin unloaded");
+  }
+
+  private _setupStatusBarItem() {
+    this._statusBarItem = this.addStatusBarItem();
+    this._statusBarItem.addClass('mod-clickable');
+
+    this._statusBarItem.onClickEvent((e) => {
+      const menu = new Menu();
+
+      menu.addItem((item) => {
+        item.setIsLabel(true);
+        item.setTitle('Actions');
+        item.setDisabled(true);
+      });
+      menu.addItem((item) => {
+        item.setTitle('Arrange Evenly');
+        item.setIcon("layout-grid");
+        item.onClick(() => {
+          this._arrangeEvenly();
+        });
+      });
+      menu.addItem((item) => {
+        item.setTitle('Expand Active Editor');
+        item.setIcon("expand");
+        item.onClick(() => {
+          if (!this._isLeafUnderRootSplit(this.app.workspace.activeLeaf)) {
+            new Notice('Should focus on an editor to expand');
+            return;
+          }
+          this._expandActiveLeaf();
+        });
+      });
+
+      // Mode switch
+      menu.addItem((item) => {
+        item.setIsLabel(true);
+        item.setTitle('Mode');
+        item.setDisabled(true);
+      });
+      menu.addItem((item) => {
+        item.setTitle('Manual arrangement');
+        item.setIcon("columns-2");
+        item.setChecked(this.mode === ARRANGEMENT_MODE.NORMAL);
+        item.onClick((e) => {
+          this.mode = ARRANGEMENT_MODE.NORMAL;
+          setIcon(this._statusBarItem!, iconForMode[this.mode]);
+        });
+      });
+      menu.addItem((item) => {
+        item.setTitle('Auto Expand Active Editor');
+        item.setIcon("expand");
+        item.setChecked(this.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
+        item.onClick((e) => {
+          this.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
+          setIcon(this._statusBarItem!, iconForMode[this.mode]);
+        });
+      });
+
+      menu.showAtMouseEvent(e);
+    });
+
+    this._updateStatusBarItem();
+  }
+
+  private _updateStatusBarItem() {
+    setIcon(this._statusBarItem!, iconForMode[this.mode]);
+    this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
+    this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement');
   }
 
   private _registerCommands() {
@@ -52,12 +129,19 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: 'arrange-editor-groups-toggle-expand',
-      name: 'Toggle Expand Active Editor',
+      id: 'arrange-editor-groups-toggle-mode-and-apply',
+      name: 'Toggle Mode between Manual/Auto Expand and Apply',
       callback: () => {
-        this._toggleExpand();
+        if (this.mode === ARRANGEMENT_MODE.NORMAL) {
+          this._expandActiveLeaf();
+          this.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
+        } else {
+          this.mode = ARRANGEMENT_MODE.NORMAL;
+          this._arrangeEvenly();
+        }
+        this._updateStatusBarItem();
       },
-      hotkeys: [],
+      hotkeys: []
     })
 
     // TODO feature to be implemented in the future
@@ -76,7 +160,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       const target = event.target as HTMLElement;
       if (!target.closest('.mod-root')) return;
 
-      if (this._isExpandedGroup) {
+      if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
         const closestElem = target.closest('.workspace-tab-header')
         if (closestElem) {
           this._expandActiveLeaf();
@@ -95,50 +179,27 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     //     // to prevent the default behavior of double click, which is to resize the window
     //     event.stopPropagation();
     //     event.preventDefault();
-
-    //     this._toggleExpand();
     //   }
     // });
 
     this.app.workspace.on('active-leaf-change', (leaf) => {
       // TODO buggy, it you create a new split node from tab node that exists in other split, it will not work. Since the active leaf is not changed...
       // FIXME: maybe we can listen to layout-change event
-      if (this._isExpandedGroup && leaf && this._isLeafUnderRootSplit(leaf)) {
+      if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND && leaf && this._isLeafUnderRootSplit(leaf)) {
         this._expandActiveLeaf(leaf);
       }
     });
 
-    this.registerDomEvent(window, 'resize', debounce(() => {
-      if (this._isExpandedGroup) {
-        this._expandActiveLeaf();
-      }
-    }, 100));
-  }
-
-  private _updateUI() {
-    if (this._isExpandedGroup) {
-      setIcon(this._statusBarItem!, 'expand');
-
-      // set aria-label to make it accessible
-      this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement: Expanded');
-      // new Notice('Editor group arrangement is set to expanded');
-    } else {
-      setIcon(this._statusBarItem!, 'shrink');
-
-      // set aria-label to make it accessible
-      this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement: Normal');
-
-      // new Notice('Editor group arrangement is reset to normal');
-    }
-    this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
-  }
-
-  private _toggleExpand() {
-    if (this._isExpandedGroup) {
-      this._arrangeEvenly();
-    } else {
-      this._expandActiveLeaf();
-    }
+    this.registerDomEvent(window, 'resize',
+      debounce(
+        () => {
+          if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
+            this._expandActiveLeaf();
+          }
+        },
+        100
+      )
+    );
   }
 
   private _collectedNonLeafNodes() {
@@ -175,9 +236,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       if (!el) return;
       el.style.flexGrow = '';
     });
-
-    this._isExpandedGroup = false;
-    this._updateUI();
   }
 
   /**
@@ -198,7 +256,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     return pathAscendants;
   }
 
-  private _isLeafUnderRootSplit(leaf: WorkspaceItem): boolean {
+  private _isLeafUnderRootSplit(leaf: WorkspaceItem | null): boolean {
+    if (!leaf) return false;
+
     let parent = leaf.parent;
     while (parent) {
       if (parent === this.app.workspace.rootSplit) {
@@ -215,13 +275,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
    */
   private _expandActiveLeaf(leaf?: WorkspaceLeaf) {
     const activeLeaf = leaf || this.app.workspace.activeLeaf;
-    if (
-      !activeLeaf
-      || !this._isLeafUnderRootSplit(activeLeaf)
-    ) {
-      new Notice('Cursor or focus is not in any editor');
-      return;
-    };
+    if (!this._isLeafUnderRootSplit(activeLeaf)) {
+      throw new Error('The active leaf is not under root split');
+    }
 
     /**
      * calculate the minimum size for each tab node and split node, in a bottom-up manner
@@ -320,7 +376,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       weightOrHeightOfPathNode = Math.max(weightOrHeightOfPathNode,
         isHorizontal ? EditorGroupArrangementPlugin.MIN_HEIGHT_PX : EditorGroupArrangementPlugin.MIN_WIDTH_PX
       );
-      
+
       // transform px to percentage
       const isPathNodeExist = (children as WorkspaceItem[]).some((child: WorkspaceItem) => pathAscendants.includes(child));
       const flexGrowOfPathNode = 100 * weightOrHeightOfPathNode / (weightOrHeightOfPathNode + weightOrHeightOfNonPathNode);
@@ -349,8 +405,5 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
     // TODO if small root split is small, we need to handle it differently
     doRecurForResize(rootNode, minSizeMap, pathAscendants);
-
-    this._isExpandedGroup = true;
-    this._updateUI();
   }
 }
