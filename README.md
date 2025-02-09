@@ -31,9 +31,9 @@ This is a plugin for [Obsidian](https://obsidian.md/), which provides a way to a
 
 ## TODOs
 
-- [ ] Write the README
-- [ ] Fix some bugs that impact the basic functionality
-- [ ] Use slider component for the min size for expand mode
+- [x] Write the README
+- [x] Fix some bugs that impact the basic functionality
+- [x] Support editor expand mode similar to vscode
 - [ ] Support ratio mode, for example, 3:1, 1:2:1, 1:1:1:1 etc.
 - [ ] Support ratio mode from UI. For example, user can drag the border/input ratio to change the ratio of the editor group.
 - [ ] Support custom arrangement mode, by the workspace layout state provided by user. For example, the plugin can read the root split state from workspace layout, and then apply the arrangement to the editor group without replacing the open editors.
