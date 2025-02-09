@@ -1,16 +1,16 @@
-import { Menu, Notice, Plugin, setIcon, SliderComponent, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { App, Menu, Notice, Plugin, PluginSettingTab, setIcon, Setting, SliderComponent, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 import { debounce } from 'obsidian';
 
 enum ARRANGEMENT_MODE {
   /**
    * Normal mode, nothing will happen when the active editor is focused
    */
-  NORMAL,
+  NORMAL = "normal",
 
   /**
    * Automatically expand the active editor when it is focused
    */
-  AUTO_EXPAND,
+  AUTO_EXPAND = "auto_expand",
 }
 
 const iconForMode = {
@@ -18,12 +18,112 @@ const iconForMode = {
   [ARRANGEMENT_MODE.AUTO_EXPAND]: 'expand',
 }
 
-export default class EditorGroupArrangementPlugin extends Plugin {
-  // TODO configurable
-  static MIN_HEIGHT_PX = 80;
-  static MIN_WIDTH_PX = 200;
+interface EditorGroupArrangementPluginSettings {
+  mode: ARRANGEMENT_MODE;
 
-  private mode: ARRANGEMENT_MODE = ARRANGEMENT_MODE.NORMAL;
+  /**
+   * Minimum height for inactive editor groups of a tab node when expanding active group 
+   */
+  MIN_HEIGHT_PX: number;
+
+  /**
+   * Minimum width for inactive editor groups of a tab node when expanding active group
+   */
+  MIN_WIDTH_PX: number;
+}
+
+const DEFAULT_SETTINGS: EditorGroupArrangementPluginSettings = {
+  mode: ARRANGEMENT_MODE.NORMAL,
+  MIN_HEIGHT_PX: 80,
+  MIN_WIDTH_PX: 200,
+};
+
+export class EditorGroupArrangementPluginTab extends PluginSettingTab {
+  plugin: EditorGroupArrangementPlugin;
+
+  debouncedRearrange: () => void;
+
+  constructor(app: App, plugin: EditorGroupArrangementPlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+
+    this.debouncedRearrange = debounce(() => {
+      if (this.plugin.settings.mode !== ARRANGEMENT_MODE.AUTO_EXPAND) return;
+      this.plugin.executeModeAction();
+    }, 100);
+  }
+
+  display(): void {
+    let { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Mode')
+      .setDesc('Choose the mode for editor arrangement')
+      .addDropdown((dropdown) => {
+        dropdown.addOption(ARRANGEMENT_MODE.NORMAL, "Manual arrangement");
+        dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto Expand Active Editor");
+        dropdown.setValue(this.plugin.settings.mode);
+        dropdown.onChange(async (value) => {
+          this.plugin.settings.mode = value as ARRANGEMENT_MODE;
+          await this.plugin.saveSettings();
+        });
+      })
+
+    new Setting(containerEl)
+      .setName('Minimum Width for Inactive Editor Groups')
+      .setDesc('Minimum width for inactive editor groups of a tab node when expanding active group')
+      .addSlider((slider) => {
+        slider.setLimits(50, 250, 10);
+        slider.setValue(this.plugin.settings.MIN_WIDTH_PX);
+        slider.setDynamicTooltip();
+        slider.onChange(async (value) => {
+          this.plugin.settings.MIN_WIDTH_PX = value;
+          await this.plugin.saveSettings();
+          this.debouncedRearrange();
+        });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("reset")
+          .setTooltip("Reset to default")
+          .onClick(async () => {
+            this.plugin.settings.MIN_WIDTH_PX = DEFAULT_SETTINGS.MIN_WIDTH_PX;
+            await this.plugin.saveSettings();
+            this.debouncedRearrange();
+            this.display();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName('Minimum Height for Inactive Editor Groups')
+      .setDesc('Minimum height for inactive editor groups of a tab node when expanding active group')
+      .addSlider((slider) => {
+        slider.setLimits(50, 250, 10);
+        slider.setValue(this.plugin.settings.MIN_HEIGHT_PX);
+        slider.setDynamicTooltip();
+        slider.onChange(async (value) => {
+          this.plugin.settings.MIN_HEIGHT_PX = value;
+          await this.plugin.saveSettings();
+          this.debouncedRearrange();
+        });
+      })
+      .addExtraButton((button) => {
+        button
+          .setIcon("reset")
+          .setTooltip("Reset to default")
+          .onClick(async () => {
+            this.plugin.settings.MIN_HEIGHT_PX = DEFAULT_SETTINGS.MIN_HEIGHT_PX;
+            await this.plugin.saveSettings();
+            this.debouncedRearrange();
+            this.display();
+          });
+      });
+  }
+}
+
+export default class EditorGroupArrangementPlugin extends Plugin {
+  settings: EditorGroupArrangementPluginSettings;
 
   /**
    * Status bar item to show the current status of the plugin
@@ -32,6 +132,8 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
   async onload() {
     console.log("obsidian-editor-group-arrangement-plugin loaded");
+    await this.loadSettings();
+    this.addSettingTab(new EditorGroupArrangementPluginTab(this.app, this));
     this._registerCommands();
     this._registerEventListeners();
     this._setupStatusBarItem();
@@ -39,6 +141,26 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
   async onunload() {
     console.log("obsidian-editor-group-arrangement-plugin unloaded");
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+    this._updateStatusBarItem();
+  }
+
+  /**
+   * Execute the action based on the current mode
+   */
+  executeModeAction() {
+    if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
+      this._expandActiveLeaf();
+    } else {
+      this._arrangeEvenly();
+    }
   }
 
   private _setupStatusBarItem() {
@@ -81,19 +203,21 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       menu.addItem((item) => {
         item.setTitle('Manual arrangement');
         item.setIcon("columns-2");
-        item.setChecked(this.mode === ARRANGEMENT_MODE.NORMAL);
+        item.setChecked(this.settings.mode === ARRANGEMENT_MODE.NORMAL);
         item.onClick((e) => {
-          this.mode = ARRANGEMENT_MODE.NORMAL;
-          setIcon(this._statusBarItem!, iconForMode[this.mode]);
+          this.settings.mode = ARRANGEMENT_MODE.NORMAL;
+          setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
+          this.saveSettings();
         });
       });
       menu.addItem((item) => {
         item.setTitle('Auto Expand Active Editor');
         item.setIcon("expand");
-        item.setChecked(this.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
-        item.onClick((e) => {
-          this.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
-          setIcon(this._statusBarItem!, iconForMode[this.mode]);
+        item.setChecked(this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
+        item.onClick(async (e) => {
+          this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
+          setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
+          await this.saveSettings();
         });
       });
 
@@ -104,7 +228,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   private _updateStatusBarItem() {
-    setIcon(this._statusBarItem!, iconForMode[this.mode]);
+    setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
     this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
     this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement');
   }
@@ -131,12 +255,12 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     this.addCommand({
       id: 'arrange-editor-groups-toggle-mode-and-apply',
       name: 'Toggle Mode between Manual/Auto Expand and Apply',
-      callback: () => {
-        if (this.mode === ARRANGEMENT_MODE.NORMAL) {
+      callback: async () => {
+        if (this.settings.mode === ARRANGEMENT_MODE.NORMAL) {
           this._expandActiveLeaf();
-          this.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
+          this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
         } else {
-          this.mode = ARRANGEMENT_MODE.NORMAL;
+          this.settings.mode = ARRANGEMENT_MODE.NORMAL;
           this._arrangeEvenly();
         }
         this._updateStatusBarItem();
@@ -160,7 +284,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       const target = event.target as HTMLElement;
       if (!target.closest('.mod-root')) return;
 
-      if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
+      if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
         const closestElem = target.closest('.workspace-tab-header')
         if (closestElem) {
           this._expandActiveLeaf();
@@ -185,15 +309,15 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     this.app.workspace.on('active-leaf-change', (leaf) => {
       // TODO buggy, it you create a new split node from tab node that exists in other split, it will not work. Since the active leaf is not changed...
       // FIXME: maybe we can listen to layout-change event
-      if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND && leaf && this._isLeafUnderRootSplit(leaf)) {
+      if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND && leaf && this._isLeafUnderRootSplit(leaf)) {
         this._expandActiveLeaf(leaf);
       }
     });
 
     this.registerDomEvent(window, 'resize',
       debounce(
-        () => {
-          if (this.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
+        async () => {
+          if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND) {
             this._expandActiveLeaf();
           }
         },
@@ -275,7 +399,10 @@ export default class EditorGroupArrangementPlugin extends Plugin {
    */
   private _expandActiveLeaf(leaf?: WorkspaceLeaf) {
     const activeLeaf = leaf || this.app.workspace.activeLeaf;
-    if (!this._isLeafUnderRootSplit(activeLeaf)) {
+    if (
+      !activeLeaf
+      || !this._isLeafUnderRootSplit(activeLeaf)
+    ) {
       throw new Error('The active leaf is not under root split');
     }
 
@@ -284,7 +411,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
      * 
      * the size(width and height) will be saved in @param minSizeMap
      */
-    function doRecurForSizeCalculation(root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>): [number, number] {
+    const doRecurForSizeCalculation = (root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>): [number, number] => {
       if (root instanceof WorkspaceSplit) {
         // @ts-ignore Since it is a private property
         const children = root.children;
@@ -315,7 +442,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       } else {
         // reach the bottom, time to return. Here, we ensure bottom is a tab node
         if (!(root instanceof WorkspaceTabs)) throw new Error('Unexpected node type'); // TODO show error message
-        return [EditorGroupArrangementPlugin.MIN_WIDTH_PX, EditorGroupArrangementPlugin.MIN_HEIGHT_PX];
+        return [this.settings.MIN_WIDTH_PX, this.settings.MIN_HEIGHT_PX];
       }
     }
 
@@ -324,7 +451,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
      * 
      * After resizing, the expanded node should have a large enough size, and the rest should have a minimum size.
      */
-    function doRecurForResize(root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>, pathAscendants: Array<WorkspaceItem>) {
+    const doRecurForResize = (root: WorkspaceItem, minSizeMap: Map<WorkspaceItem, [number, number]>, pathAscendants: Array<WorkspaceItem>) => {
       if (!(root instanceof WorkspaceSplit)) return;
 
       // @ts-ignore Since it is a private property
@@ -374,7 +501,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
       // ensure the minimum size
       weightOrHeightOfPathNode = Math.max(weightOrHeightOfPathNode,
-        isHorizontal ? EditorGroupArrangementPlugin.MIN_HEIGHT_PX : EditorGroupArrangementPlugin.MIN_WIDTH_PX
+        isHorizontal ? this.settings.MIN_HEIGHT_PX : this.settings.MIN_WIDTH_PX
       );
 
       // transform px to percentage
