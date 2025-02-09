@@ -59,7 +59,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Mode')
-      .setDesc('Choose the mode for editor arrangement')
+      .setDesc('Choose the mode for editor group arrangement')
       .addDropdown((dropdown) => {
         dropdown.addOption(ARRANGEMENT_MODE.NORMAL, "Manual arrangement");
         dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto Expand Active Editor");
@@ -230,7 +230,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   private _updateStatusBarItem() {
     setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
     this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
-    this._statusBarItem!.setAttribute('aria-label', 'Editor arrangement');
+    this._statusBarItem!.setAttribute('aria-label', 'Editor Group Arrangement');
   }
 
   private _registerCommands() {
