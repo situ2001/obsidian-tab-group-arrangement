@@ -27,6 +27,7 @@ This is a plugin for [Obsidian](https://obsidian.md/), which provides a way to a
 
 - The plugin is still in the early stage, so there might be some bugs.
 - In some cases, after switching mode to auto expand, you should *change the active editor* or click on the editor tab to trigger the expand action.
+- Since double click on tab of editor will cause Obsidian window to maximize, the plugin does not support double click on tab to expand the editor.
 
 ## TODOs
 
