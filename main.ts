@@ -235,7 +235,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
   private _registerCommands() {
     this.addCommand({
-      id: 'arrange-editor-groups-evenly',
+      id: 'arrange-evenly',
       name: 'Arrange Evenly',
       callback: () => {
         this._arrangeEvenly();
@@ -250,7 +250,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: 'arrange-editor-groups-expand-active',
+      id: 'arrange-expand-active',
       name: 'Expand Active Editor',
       callback: () => {
         this._expandActiveLeaf();
@@ -265,7 +265,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: 'arrange-editor-groups-toggle-mode',
+      id: 'toggle-mode-between-manual-and-auto-expand',
       name: 'Toggle Mode between Manual and Auto Expand',
       callback: async () => {
         if (this.settings.mode === ARRANGEMENT_MODE.NORMAL) {
