@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-editor-group-arrangement",
 	"version": "1.0.0",
-	"description": "An Obsidian plugin that provides a way to arrange the editor group in a more flexible way.",
+	"description": "Arrange the editor group in a more flexible way. For now, it supports arranging evenly and expanded like VSCode. User can make action and switch mode of arrangement by clicking the status bar or executing commands.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
