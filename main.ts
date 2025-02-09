@@ -1,4 +1,4 @@
-import { App, Menu, Notice, Plugin, PluginSettingTab, setIcon, Setting, SliderComponent, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { App, Menu, Notice, Plugin, PluginSettingTab, setIcon, Setting, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 import { debounce } from 'obsidian';
 
 enum ARRANGEMENT_MODE {
@@ -54,7 +54,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
   }
 
   display(): void {
-    let { containerEl } = this;
+    const { containerEl } = this;
     containerEl.empty();
 
     new Setting(containerEl)
@@ -128,7 +128,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   /**
    * Status bar item to show the current status of the plugin
    */
-  private _statusBarItem: HTMLElement | undefined;
+  private _statusBarItem: HTMLElement;
 
   async onload() {
     console.log("obsidian-editor-group-arrangement-plugin loaded");
@@ -206,7 +206,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         item.setChecked(this.settings.mode === ARRANGEMENT_MODE.NORMAL);
         item.onClick((e) => {
           this.settings.mode = ARRANGEMENT_MODE.NORMAL;
-          setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
+          setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
           this.saveSettings();
         });
       });
@@ -216,7 +216,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         item.setChecked(this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
         item.onClick(async (e) => {
           this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
-          setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
+          setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
           await this.saveSettings();
         });
       });
@@ -228,9 +228,9 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   private _updateStatusBarItem() {
-    setIcon(this._statusBarItem!, iconForMode[this.settings.mode]);
-    this._statusBarItem!.setAttribute('data-tooltip-position', 'top');
-    this._statusBarItem!.setAttribute('aria-label', 'Editor Group Arrangement');
+    setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
+    this._statusBarItem.setAttribute('data-tooltip-position', 'top');
+    this._statusBarItem.setAttribute('aria-label', 'Editor Group Arrangement');
   }
 
   private _registerCommands() {
@@ -440,6 +440,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
         let minSizeOfCurrentNode = [0, 0];
         for (const child of children) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           const [width, height] = minSizeMap.get(child)!;
           if (isVertical) {
             minSizeOfCurrentNode = [minSizeOfCurrentNode[0] + width, Math.max(minSizeOfCurrentNode[1], height)];
@@ -472,8 +473,8 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       // @ts-ignore Since it is a private property
       const containerEl = root.containerEl as HTMLElement;
       const containerSize = containerEl.getBoundingClientRect();
-      let containerWidth = containerSize.width;
-      let containerHeight = containerSize.height;
+      const containerWidth = containerSize.width;
+      const containerHeight = containerSize.height;
 
       // get horizontal or vertical split, then calculate the minimum size for this split node itself
       // @ts-ignore Since it is a private property
@@ -492,6 +493,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
           continue;
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         const [width, height] = minSizeMap.get(child)!;
         if (isVertical) {
           weightOrHeightOfNonPathNode += width;
