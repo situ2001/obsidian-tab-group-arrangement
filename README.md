@@ -2,7 +2,7 @@
 
 > Arrange your editor group in a more flexible way.
 
-![screenshots](./screenshot-recording.mov)
+![screenshots](./screen-recording.mov)
 
 ## Introduction
 
