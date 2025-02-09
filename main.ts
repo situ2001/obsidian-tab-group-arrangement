@@ -240,7 +240,13 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       callback: () => {
         this._arrangeEvenly();
       },
-      hotkeys: []
+      hotkeys: [
+        // Control + Shift + R
+        // {
+        //   modifiers: ['Mod', 'Shift'],
+        //   key: 'R'
+        // }
+      ]
     });
 
     this.addCommand({
@@ -249,24 +255,30 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       callback: () => {
         this._expandActiveLeaf();
       },
-      hotkeys: []
+      hotkeys: [
+        // Control + Shift + E
+        // {
+        //   modifiers: ['Mod', 'Shift'],
+        //   key: 'E'
+        // }
+      ]
     });
 
     this.addCommand({
-      id: 'arrange-editor-groups-toggle-mode-and-apply',
-      name: 'Toggle Mode between Manual/Auto Expand and Apply',
+      id: 'arrange-editor-groups-toggle-mode',
+      name: 'Toggle Mode between Manual and Auto Expand',
       callback: async () => {
         if (this.settings.mode === ARRANGEMENT_MODE.NORMAL) {
-          this._expandActiveLeaf();
           this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
         } else {
           this.settings.mode = ARRANGEMENT_MODE.NORMAL;
-          this._arrangeEvenly();
         }
+        await this.saveSettings();
         this._updateStatusBarItem();
+        new Notice(`Mode switched to ${this.settings.mode}`);
       },
       hotkeys: []
-    })
+    });
 
     // TODO feature to be implemented in the future
     // this.addCommand({
