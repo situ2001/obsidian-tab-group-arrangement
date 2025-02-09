@@ -22,7 +22,7 @@ This is a plugin for [Obsidian](https://obsidian.md/), which provides a way to a
 ## Limitations
 
 - The plugin is still in the early stage, so there might be some bugs.
-- After switching mode to auto expand, you should *change the active editor* or click on the editor tab to trigger the expand action.
+- In some cases, after switching mode to auto expand, you should *change the active editor* or click on the editor tab to trigger the expand action.
 
 ## TODOs
 
