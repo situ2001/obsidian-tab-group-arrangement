@@ -331,13 +331,15 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     //   }
     // });
 
-    this.app.workspace.on('active-leaf-change', (leaf) => {
-      // TODO buggy, it you create a new split node from tab node that exists in other split, it will not work. Since the active leaf is not changed...
-      // FIXME: maybe we can listen to layout-change event
-      if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND && leaf && this._isLeafUnderRootSplit(leaf)) {
-        this._expandActiveLeaf(leaf);
-      }
-    });
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', (leaf) => {
+        // TODO buggy, it you create a new split node from tab node that exists in other split, it will not work. Since the active leaf is not changed...
+        // FIXME: maybe we can listen to layout-change event
+        if (this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND && leaf && this._isLeafUnderRootSplit(leaf)) {
+          this._expandActiveLeaf(leaf);
+        }
+      })
+    );
 
     this.registerDomEvent(window, 'resize',
       debounce(
