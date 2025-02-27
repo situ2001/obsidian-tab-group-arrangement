@@ -22,18 +22,18 @@ const iconForMode = {
 }
 
 /**
- * Settings for the Editor Group Arrangement Plugin
+ * Settings for the tab group arrangement plugin
  */
 interface EditorGroupArrangementPluginSettings {
   mode: ARRANGEMENT_MODE;
 
   /**
-   * Minimum height for inactive editor groups of a tab node when expanding active group 
+   * Minimum height for inactive tab groups of a tab node when expanding active group 
    */
   MIN_HEIGHT_PX: number;
 
   /**
-   * Minimum width for inactive editor groups of a tab node when expanding active group
+   * Minimum width for inactive tab groups of a tab node when expanding active group
    */
   MIN_WIDTH_PX: number;
 }
@@ -65,10 +65,10 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Mode')
-      .setDesc('Choose the mode for editor group arrangement')
+      .setDesc('Choose the mode for tab group arrangement')
       .addDropdown((dropdown) => {
         dropdown.addOption(ARRANGEMENT_MODE.MANUAL, "Manual arrangement");
-        dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto Expand Active Editor");
+        dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto expand active editor");
         dropdown.setValue(this.plugin.settings.mode);
         dropdown.onChange(async (value) => {
           this.plugin.settings.mode = value as ARRANGEMENT_MODE;
@@ -77,8 +77,8 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       })
 
     new Setting(containerEl)
-      .setName('Minimum Width for Inactive Editor Groups')
-      .setDesc('Minimum width for inactive editor groups of a tab node when expanding active group')
+      .setName('Minimum width for inactive tab groups')
+      .setDesc('Minimum width for inactive tab groups of a tab node when expanding active group')
       .addSlider((slider) => {
         slider.setLimits(50, 250, 10);
         slider.setValue(this.plugin.settings.MIN_WIDTH_PX);
@@ -102,8 +102,8 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName('Minimum Height for Inactive Editor Groups')
-      .setDesc('Minimum height for inactive editor groups of a tab node when expanding active group')
+      .setName('Minimum height for inactive tab groups')
+      .setDesc('Minimum height for inactive tab groups of a tab node when expanding active group')
       .addSlider((slider) => {
         slider.setLimits(50, 250, 10);
         slider.setValue(this.plugin.settings.MIN_HEIGHT_PX);
@@ -137,7 +137,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   private _statusBarItem: HTMLElement;
 
   async onload() {
-    console.log("obsidian-editor-group-arrangement-plugin loaded");
+    console.log("obsidian-tab-group-arrangement-plugin loaded");
     await this.loadSettings();
     this.addSettingTab(new EditorGroupArrangementPluginTab(this.app, this));
     this._registerCommands();
@@ -146,7 +146,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   async onunload() {
-    console.log("obsidian-editor-group-arrangement-plugin unloaded");
+    console.log("obsidian-tab-group-arrangement-plugin unloaded");
   }
 
   async loadSettings() {
@@ -197,7 +197,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         });
       });
       menu.addItem((item) => {
-        item.setTitle('Expand Active Editor');
+        item.setTitle('Expand active editor');
         item.setIcon("expand");
         item.onClick(() => {
           if (!this._isLeafUnderRootSplit(this.app.workspace.activeLeaf)) {
@@ -225,7 +225,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         });
       });
       menu.addItem((item) => {
-        item.setTitle('Auto Expand Active Editor');
+        item.setTitle('Auto expand active editor');
         item.setIcon("expand");
         item.setChecked(this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
         item.onClick(async (e) => {
@@ -244,13 +244,13 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   private _updateStatusBarItem() {
     setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
     this._statusBarItem.setAttribute('data-tooltip-position', 'top');
-    this._statusBarItem.setAttribute('aria-label', 'Editor Group Arrangement');
+    this._statusBarItem.setAttribute('aria-label', 'Tab group arrangement');
   }
 
   private _registerCommands() {
     this.addCommand({
       id: 'arrange-evenly',
-      name: 'Arrange Evenly',
+      name: 'Arrange evenly',
       callback: () => {
         this._arrangeEvenly();
       },
@@ -265,7 +265,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
     this.addCommand({
       id: 'arrange-expand-active',
-      name: 'Expand Active Editor',
+      name: 'Expand active editor',
       callback: () => {
         this._expandActiveLeaf();
       },
@@ -280,7 +280,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
     this.addCommand({
       id: 'toggle-mode-between-manual-and-auto-expand',
-      name: 'Toggle Mode between Manual and Auto Expand',
+      name: 'Toggle mode between manual and auto expand',
       callback: async () => {
         if (this.settings.mode === ARRANGEMENT_MODE.MANUAL) {
           this.settings.mode = ARRANGEMENT_MODE.AUTO_EXPAND;
@@ -296,7 +296,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
     // TODO feature to be implemented in the future
     // this.addCommand({
-    //   id: 'arrange-editor-groups-collapse-maximize-active',
+    //   id: 'arrange-tab-groups-collapse-maximize-active',
     //   name: 'Maximize Active Editor',
     //   callback: () => {
     //     // TODO
