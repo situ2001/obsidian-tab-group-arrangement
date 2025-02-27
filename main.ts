@@ -1,4 +1,4 @@
-import { App, Menu, Notice, Plugin, PluginSettingTab, setIcon, Setting, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
+import { App, Menu, Notice, Plugin, PluginSettingTab, setIcon, Setting, setTooltip, WorkspaceItem, WorkspaceLeaf, WorkspaceSplit, WorkspaceTabs } from 'obsidian';
 import { debounce } from 'obsidian';
 
 enum ARRANGEMENT_MODE {
@@ -243,8 +243,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
   private _updateStatusBarItem() {
     setIcon(this._statusBarItem, iconForMode[this.settings.mode]);
-    this._statusBarItem.setAttribute('data-tooltip-position', 'top');
-    this._statusBarItem.setAttribute('aria-label', 'Tab group arrangement');
+    setTooltip(this._statusBarItem, `Tab group arrangement`, { placement: "top" });
   }
 
   private _registerCommands() {
