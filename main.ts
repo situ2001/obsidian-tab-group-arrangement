@@ -68,7 +68,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       .setDesc('Choose the mode for tab group arrangement')
       .addDropdown((dropdown) => {
         dropdown.addOption(ARRANGEMENT_MODE.MANUAL, "Manual arrangement");
-        dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto expand active editor");
+        dropdown.addOption(ARRANGEMENT_MODE.AUTO_EXPAND, "Auto expand active tab group");
         dropdown.setValue(this.plugin.settings.mode);
         dropdown.onChange(async (value) => {
           this.plugin.settings.mode = value as ARRANGEMENT_MODE;
@@ -197,11 +197,11 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         });
       });
       menu.addItem((item) => {
-        item.setTitle('Expand active editor');
+        item.setTitle('Expand active tab group');
         item.setIcon("expand");
         item.onClick(() => {
           if (!this._isLeafUnderRootSplit(this.app.workspace.activeLeaf)) {
-            new Notice('Should focus on an editor to expand');
+            new Notice('Should focus on an editor or tab to expand');
             return;
           }
           this._expandActiveLeaf();
@@ -225,7 +225,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         });
       });
       menu.addItem((item) => {
-        item.setTitle('Auto expand active editor');
+        item.setTitle('Auto expand active tab group');
         item.setIcon("expand");
         item.setChecked(this.settings.mode === ARRANGEMENT_MODE.AUTO_EXPAND);
         item.onClick(async (e) => {
@@ -264,7 +264,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
 
     this.addCommand({
       id: 'arrange-expand-active',
-      name: 'Expand active editor',
+      name: 'Expand active tab group',
       callback: () => {
         this._expandActiveLeaf();
       },
@@ -296,7 +296,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     // TODO feature to be implemented in the future
     // this.addCommand({
     //   id: 'arrange-tab-groups-collapse-maximize-active',
-    //   name: 'Maximize Active Editor',
+    //   name: 'Maximize active tab',
     //   callback: () => {
     //     // TODO
     //   },

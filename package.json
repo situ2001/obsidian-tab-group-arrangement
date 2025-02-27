@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-editor-group-arrangement",
+	"name": "obsidian-tab-group-arrangement",
 	"version": "1.0.0",
-	"description": "Arrange the editor group in a more flexible way. For now, it supports arranging evenly and expanded like VSCode. User can make action and switch mode of arrangement by clicking the status bar or executing commands.",
+	"description": "Arrange the tab group in a more flexible way. For now, it supports arranging evenly and expanded like VSCode. User can make action and switch mode of arrangement by clicking the status bar or executing commands.",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
