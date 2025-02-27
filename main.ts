@@ -80,7 +80,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       .setName('Minimum width for inactive tab groups')
       .setDesc('Minimum width for inactive tab groups of a tab node when expanding active group')
       .addSlider((slider) => {
-        slider.setLimits(50, 250, 10);
+        slider.setLimits(50, 300, 10);
         slider.setValue(this.plugin.settings.MIN_WIDTH_PX);
         slider.setDynamicTooltip();
         slider.onChange(async (value) => {
@@ -105,7 +105,7 @@ export class EditorGroupArrangementPluginTab extends PluginSettingTab {
       .setName('Minimum height for inactive tab groups')
       .setDesc('Minimum height for inactive tab groups of a tab node when expanding active group')
       .addSlider((slider) => {
-        slider.setLimits(50, 250, 10);
+        slider.setLimits(50, 300, 10);
         slider.setValue(this.plugin.settings.MIN_HEIGHT_PX);
         slider.setDynamicTooltip();
         slider.onChange(async (value) => {
