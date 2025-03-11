@@ -252,14 +252,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       name: 'Arrange evenly',
       callback: () => {
         this._arrangeEvenly();
-      },
-      hotkeys: [
-        // Control + Shift + R
-        // {
-        //   modifiers: ['Mod', 'Shift'],
-        //   key: 'R'
-        // }
-      ]
+      }
     });
 
     this.addCommand({
@@ -267,14 +260,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
       name: 'Expand active tab group',
       callback: () => {
         this._expandActiveLeaf();
-      },
-      hotkeys: [
-        // Control + Shift + E
-        // {
-        //   modifiers: ['Mod', 'Shift'],
-        //   key: 'E'
-        // }
-      ]
+      }
     });
 
     this.addCommand({
@@ -289,8 +275,7 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         await this.saveSettings();
         this._updateStatusBarItem();
         new Notice(`Mode switched to ${this.settings.mode}`);
-      },
-      hotkeys: []
+      }
     });
 
     // TODO feature to be implemented in the future
@@ -300,7 +285,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
     //   callback: () => {
     //     // TODO
     //   },
-    //   hotkeys: []
     // })
   }
 
