@@ -305,6 +305,8 @@ export default class EditorGroupArrangementPlugin extends Plugin {
   }
 
   private _registerEventListeners() {
+    // TODO buggy: when we double on tab, the electron window will resize before the plugin can handle the event, and we cannot prevent it
+    // Thus why I use click event instead of dblclick event
     this.registerDomEvent(document, 'click', (event) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.mod-root')) return;
@@ -316,20 +318,6 @@ export default class EditorGroupArrangementPlugin extends Plugin {
         }
       }
     });
-
-    // TODO buggy: when we double on tab, the electron window will resize before the plugin can handle the event, and we cannot prevent it
-    // this.registerDomEvent(document, 'dblclick', (event) => {
-    //   const target = event.target as HTMLElement;
-    //   if (!target.closest('.mod-root')) return;
-
-    //   // check if it is in or is a tab item. class name of tab item is "workspace-tab-header" and "tappable"
-    //   const closestElem = target.closest('.workspace-tab-header')
-    //   if (closestElem) {
-    //     // to prevent the default behavior of double click, which is to resize the window
-    //     event.stopPropagation();
-    //     event.preventDefault();
-    //   }
-    // });
 
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {
